@@ -3,7 +3,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 
-class AgentState(TypedDict, total=False):
+class CoderState(TypedDict, total=False):
 
     user_request: str
 
@@ -17,15 +17,9 @@ class AgentState(TypedDict, total=False):
 
     failed_tasks: List[str]
 
-    next_agent: str
-
-    manager_reason: str
-
-    final_response: str
-
-    coder_result: dict
-
     messages: Annotated[
         List[BaseMessage],
         add_messages
     ]
+
+    coder_result: dict

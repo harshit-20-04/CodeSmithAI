@@ -1,28 +1,28 @@
 import os
 from langchain_core.tools import tool
 
+PROJECT_ROOT = "workspace/generated_project"
+
 @tool
-def list_files(path: str) -> str:
+def list_files() -> str:
     """List files in a project directory."""
-    if not os.path.exists(path):
-        return f"Directory does not exist: {path}"
     result = []
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(PROJECT_ROOT):
         for file in files:
             full_path = os.path.join(root, file)
 
             relative_path = os.path.relpath(
                 full_path,
-                path
+                PROJECT_ROOT
             )
             result.append(relative_path)
     return "\n".join(result)
 
 @tool
-def read_file(file_name: str, path: str) -> str:
+def read_file(file_name: str) -> str:
     """Read the contents of a file."""
     path_file = os.path.join(
-        path,
+        PROJECT_ROOT,
         file_name
     )
     if not os.path.exists(path_file):
@@ -34,15 +34,15 @@ def read_file(file_name: str, path: str) -> str:
         return f"Error reading file: {str(e)}"
 
 @tool
-def write_file(file_name: str, path: str, content: str) -> str:
+def write_file(file_name: str, content: str) -> str:
     """Create or overwrite a file."""
     try:
         os.makedirs(
-            path,
+            PROJECT_ROOT,
             exist_ok=True
         )
         path_file = os.path.join(
-            path,
+            PROJECT_ROOT,
             file_name
         )
         with open(path_file, "w", encoding="utf-8") as file:
@@ -52,10 +52,10 @@ def write_file(file_name: str, path: str, content: str) -> str:
         return f"Error writing file: {str(e)}"
 
 @tool
-def edit_file(file_name: str, path: str, content: str) -> str:
+def edit_file(file_name: str, content: str) -> str:
     """Replace the complete contents of an existing file."""
     path_file = os.path.join(
-        path,
+        PROJECT_ROOT,
         file_name
     )
     if not os.path.exists(path_file):
