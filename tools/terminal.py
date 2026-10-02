@@ -1,3 +1,5 @@
+import os
+import sys
 import subprocess
 from langchain_core.tools import tool
 
@@ -26,24 +28,24 @@ def run_command(command: str) -> str:
             f"is not allowed."
         )
     try:
+        os.makedirs(PROJECT_ROOT, exist_ok=True)
+        env = os.environ.copy()
+        venv_scripts = os.path.join(sys.prefix, "Scripts")
+        if os.path.exists(venv_scripts):
+            env["PATH"] = venv_scripts + os.pathsep + env.get("PATH", "")
+
         result = subprocess.run(
             command,
             cwd=PROJECT_ROOT,
             shell=True,
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
+            env=env
         )
-        return f"""
-Exit Code:
-{result.returncode}
-
-STDOUT:
-{result.stdout}
-
-STDERR:
-{result.stderr}
-"""
+        stdout = result.stdout.strip() if result.stdout and result.stdout.strip() else "(none)"
+        stderr = result.stderr.strip() if result.stderr and result.stderr.strip() else "(none)"
+        return f"Exit Code: {result.returncode}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
     except subprocess.TimeoutExpired:
         return "Command timed out."
     except Exception as e:

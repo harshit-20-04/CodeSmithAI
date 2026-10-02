@@ -3,6 +3,7 @@ from typing import List
 
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+from langchain_mistralai import ChatMistralAI
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
@@ -29,8 +30,8 @@ load_dotenv()
 # LLM
 # =========================================================
 
-llm = ChatGroq(
-    model="openai/gpt-oss-120b",
+llm = ChatMistralAI(
+    model="codestral-latest",
     temperature=0,
 )
 
@@ -60,7 +61,10 @@ class CoderResult(BaseModel):
     )
 
 
-coder_result_llm = llm.with_structured_output(CoderResult)
+coder_result_llm = ChatMistralAI(
+    model="codestral-latest",
+    temperature=0,
+).with_structured_output(CoderResult)
 
 
 # =========================================================
@@ -138,8 +142,9 @@ When the task is complete, stop using tools and return a concise summary.
         if (getattr(msg, "type", None) or dict(msg).get("role")) != "system"
     ]
 
-    if not history_messages:
-        history_messages.append(
+    if not any(getattr(m, "type", "") == "human" or getattr(m, "role", "") == "user" for m in history_messages):
+        history_messages.insert(
+            0,
             HumanMessage(
                 content=f"Begin implementing the current task: {state.get('current_task', 'Start initialization.')}"
             )
@@ -150,10 +155,12 @@ When the task is complete, stop using tools and return a concise summary.
         history_messages,
         max_tokens=4000,
         strategy="last",
-        token_counter=len, # or pass a token counter
+        token_counter=len,
         allow_partial=False,
         start_on="human",
     )
+    if not trimmed_history:
+        trimmed_history = history_messages
 
     messages = [
         SystemMessage(content=system_prompt),
@@ -161,6 +168,13 @@ When the task is complete, stop using tools and return a concise summary.
     ]
 
     response = coder_llm.invoke(messages)
+
+    tool_names = [tc.get("name") for tc in getattr(response, "tool_calls", [])]
+    print(f"\n[Coder] Task: {state.get('current_task')}")
+    if tool_names:
+        print(f"[Coder] Invoking tool(s): {tool_names}")
+    else:
+        print(f"[Coder] Implementation step finished.")
 
     return {
         "messages": [response]
@@ -172,8 +186,20 @@ When the task is complete, stop using tools and return a concise summary.
 # =========================================================
 
 def route_code(state: CoderState):
-    last_message = state["messages"][-1]
-    if last_message.tool_calls:
+    messages = state.get("messages", [])
+    if not messages:
+        return "finalize"
+    last_message = messages[-1]
+    if getattr(last_message, "tool_calls", None):
+        # Prevent infinite loops where the EXACT same tool call (name and arguments) is repeated consecutively
+        recent_calls = []
+        for msg in messages:
+            if getattr(msg, "tool_calls", None):
+                for tc in msg.tool_calls:
+                    recent_calls.append((tc.get("name"), str(tc.get("args"))))
+        if len(recent_calls) >= 3 and len(set(recent_calls[-3:])) == 1:
+            print(f"\n[Coder] Detected identical repeated tool call for '{recent_calls[-1][0]}'. Transitioning to finalize.")
+            return "finalize"
         return "tools"
     return "finalize"
 
@@ -258,17 +284,22 @@ coder_graph = coder_builder.compile()
 
 def coder_node(state: AgentState):
 
+    current_task = state.get("current_task", "Start initialization.")
     coder_input: CoderState = {
         "user_request": state["user_request"],
         "plan": state["plan"],
         "architecture": state["architecture"],
-        "current_task": state["current_task"],
+        "current_task": current_task,
         "completed_tasks": state["completed_tasks"],
         "failed_tasks": state["failed_tasks"],
-        "messages": [],
+        "messages": [
+            HumanMessage(
+                content=f"Begin implementing the current task: {current_task}"
+            )
+        ],
     }
 
-    result = coder_graph.invoke(coder_input)
+    result = coder_graph.invoke(coder_input, config={"recursion_limit": 50})
 
     return {
         "coder_result": result["coder_result"],

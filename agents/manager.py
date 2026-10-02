@@ -1,3 +1,8 @@
+import sys
+import time
+
+sys.stdout.reconfigure(line_buffering=True)
+
 from typing import Literal
 
 from dotenv import load_dotenv
@@ -10,6 +15,9 @@ from graph.state import AgentState
 from agents.planner import planner_agent
 from agents.architect import architect_agent
 from agents.coder import coder_node
+from agents.tester import tester_agent
+from agents.debugger import debugger_agent
+from agents.reviewer import reviewer_agent
 
 from prompts.manager_prompt import MANAGER_PROMPT
 
@@ -18,8 +26,10 @@ from prompts.manager_prompt import MANAGER_PROMPT
 # =========================================================
 
 llm = ChatMistralAI(
-    model="mistral-small-2506",
+    model="codestral-latest",
     temperature=0,
+    max_retries=5,
+    timeout=60,
 )
 
 
@@ -61,7 +71,7 @@ manager_llm = llm.with_structured_output(
 # =========================================================
 
 def manager_agent(state: AgentState):
-
+    time.sleep(1)
     prompt = f"""
 {MANAGER_PROMPT}
 
@@ -106,6 +116,24 @@ CODER RESULT
 ==================================================
 
 {state.get("coder_result", {})}
+
+==================================================
+TEST RESULT
+==================================================
+
+{state.get("test_result", {})}
+
+==================================================
+DEBUG RESULT
+==================================================
+
+{state.get("debug_result", {})}
+
+==================================================
+REVIEW RESULT
+==================================================
+
+{state.get("review_result", {})}
 
 ==================================================
 DECIDE NEXT STEP
@@ -163,32 +191,14 @@ def route_manager(state: AgentState):
 # PLACEHOLDER AGENTS
 # =========================================================
 
-def tester_agent(state: AgentState):
-
-    print("Tester Agent Running...")
-
-    return {}
-
-
-def debugger_agent(state: AgentState):
-
-    print("Debugger Agent Running...")
-
-    return {}
-
-
-def reviewer_agent(state: AgentState):
-
-    print("Reviewer Agent Running...")
-
-    return {}
-
 
 def documentation_agent(state: AgentState):
-
     print("Documentation Agent Running...")
-
-    return {}
+    current_task = state.get("current_task", "")
+    completed_tasks = list(state.get("completed_tasks", []))
+    if current_task and current_task not in completed_tasks:
+        completed_tasks.append(current_task)
+    return {"completed_tasks": completed_tasks}
 
 
 #==========================================================
@@ -215,6 +225,9 @@ def process_coder_result(state: AgentState):
 
         if current_task and current_task not in completed_tasks:
             completed_tasks.append(current_task)
+
+        if current_task in failed_tasks:
+            failed_tasks.remove(current_task)
 
         print(
             f" Coder completed task: {current_task}"

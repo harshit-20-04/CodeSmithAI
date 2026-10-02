@@ -270,6 +270,10 @@ from DEVELOPMENT PLAN.
 RULE 16:
 If all implementation tasks are complete, move to testing instead of
 assigning another coding task.
+RULE 17:
+If REVIEW RESULT indicates the code is approved (approved == true):
+Do NOT select coder or debugger for past implementation tasks.
+Proceed directly to "documentation" or "done".
 ==================================================
 DECISION PRIORITY
 ==================================================

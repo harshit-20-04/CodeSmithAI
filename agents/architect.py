@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from graph.state import AgentState
 
 llm = ChatMistralAI(
-    model="mistral-small-2506",
+    model="codestral-latest",
     temperature=0
 )
 

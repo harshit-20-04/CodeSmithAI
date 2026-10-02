@@ -6,6 +6,8 @@ PROJECT_ROOT = "workspace/generated_project"
 @tool
 def list_files() -> str:
     """List files in a project directory."""
+    if not os.path.exists(PROJECT_ROOT):
+        return "Workspace is empty. No files exist yet."
     result = []
     for root, dirs, files in os.walk(PROJECT_ROOT):
         for file in files:
@@ -16,6 +18,8 @@ def list_files() -> str:
                 PROJECT_ROOT
             )
             result.append(relative_path)
+    if not result:
+        return "Workspace is empty. No files exist yet."
     return "\n".join(result)
 
 @tool
@@ -29,7 +33,8 @@ def read_file(file_name: str) -> str:
         return f"File does not exist: {path_file}"
     try:
         with open(path_file, "r", encoding="utf-8") as file:
-            return file.read()
+            content = file.read()
+            return content if content.strip() else f"File '{file_name}' exists but is empty."
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
@@ -37,13 +42,13 @@ def read_file(file_name: str) -> str:
 def write_file(file_name: str, content: str) -> str:
     """Create or overwrite a file."""
     try:
-        os.makedirs(
-            PROJECT_ROOT,
-            exist_ok=True
-        )
         path_file = os.path.join(
             PROJECT_ROOT,
             file_name
+        )
+        os.makedirs(
+            os.path.dirname(path_file),
+            exist_ok=True
         )
         with open(path_file, "w", encoding="utf-8") as file:
             file.write(content)
