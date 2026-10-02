@@ -2,7 +2,6 @@
 from typing import List
 
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
 from langchain_mistralai import ChatMistralAI
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.graph import StateGraph, START, END

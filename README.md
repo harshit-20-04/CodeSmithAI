@@ -1,12 +1,12 @@
 # CodeSmith AI
 
-CodeSmith AI is an autonomous multi-agent software engineering framework powered by LangGraph, Mistral AI, and Groq. It automatically plans, architects, writes, and tests code based on high-level natural language requirements.
+CodeSmith AI is an autonomous multi-agent software engineering framework powered by LangGraph and Mistral AI (`codestral-latest`). It automatically plans, architects, writes, tests, debugs, and reviews code based on high-level natural language requirements.
 
 ---
 
 ## 🏗 Architecture
 
-CodeSmith orchestrates multiple specialized agents using a directed state graph:
+CodeSmith orchestrates specialized agents using a directed state graph:
 
 ```
                   +---------------+
@@ -19,18 +19,21 @@ CodeSmith orchestrates multiple specialized agents using a directed state graph:
         |         +-------+-------+         |
         |                 |                 |
         |      +----------+----------+      |
-        |      |          |          |      |
-        v      v          v          v      v
-     Planner Architect  Coder     Tester Debugger
+        |      |     |    |    |     |      |
+        v      v     v    v    v     v      v
+     Planner Arch Coder Test Debug Review  Doc
                           |
                           v
-                     Tools & Workspace
+                   Tools & Workspace
 ```
 
 1. **Manager Agent (`codestral-latest`)**: Central coordinator that inspects progress, chooses the next specialized agent, and assigns specific tasks.
 2. **Planner Agent (`codestral-latest`)**: Breaks the requirement down into an ordered, dependency-aware list of actionable development tasks.
 3. **Architect Agent (`codestral-latest`)**: Designs project folder structure, technology stack, database schemas, and API endpoints.
-4. **Coder Agent Subgraph (`openai/gpt-oss-120b` on Groq + `codestral-latest`)**: Autonomous coding agent with tool-calling capabilities (`list_files`, `read_file`, `write_file`, `edit_file`, `run_command`) that executes tasks inside the workspace.
+4. **Coder Agent Subgraph (`codestral-latest`)**: Autonomous coding agent with tool-calling capabilities (`list_files`, `read_file`, `write_file`, `edit_file`, `run_command`) that implements tasks inside the workspace.
+5. **Tester Agent (`codestral-latest`)**: Discovers and runs tests (via `pytest`, `unittest`) to verify functionality.
+6. **Debugger Agent (`codestral-latest`)**: Diagnoses root causes of test or implementation failures, applies targeted fixes, and re-verifies.
+7. **Reviewer Agent (`codestral-latest`)**: Inspects code quality, architecture compliance, security, and provides a formal review score and feedback.
 
 ---
 
@@ -49,7 +52,6 @@ pip install -r requirements.txt
 Create or edit `.env` in the project root:
 ```ini
 MISTRAL_API_KEY=your_mistral_api_key_here
-GROQ_API_KEY=your_groq_api_key_here
 ```
 
 ---
